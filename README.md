@@ -1,4 +1,4 @@
-# Kenh14 - Thu Thập Tin Tức Điện Ảnh Tự Động (Bài Tập Sinh Viên)
+# Kenh14 - Thu Thập Tin Tức
 
 **Mục tiêu:** Dự án nhỏ này nhằm mục đích tự động thu thập tin tức điện ảnh từ trang web Kenh14.vn, phục vụ mục đích học tập và nộp bài tập.
 
