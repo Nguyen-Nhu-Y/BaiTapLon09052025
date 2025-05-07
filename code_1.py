@@ -6,27 +6,34 @@ import time
 from datetime import datetime
 
 url_goc = "https://kenh14.vn/cine.chn"
-dau_trang = {
+headers = {
     "User-Agent": "Mozilla/5.0"
 }
 
 def lay_tin_kenh14():
     danh_sach_bai = []
     da_xem = set()
+    trang_so = 1
 
-    for trang_so in range(1, 4):
+    while True:
         url_hien_tai = f"{url_goc}?trang={trang_so}"
-        print(f"Dang doc: {url_hien_tai}")
+        print(f"Đang đọc: {url_hien_tai}")
 
         try:
-            ket_qua = requests.get(url_hien_tai, headers=dau_trang, timeout=5)
-            ket_qua.raise_for_status()
-        except Exception as loi:
-            print(f"Khong the mo trang {url_hien_tai}: {loi}")
-            continue
+            response = requests.get(url_hien_tai, headers=headers, timeout=5)
+            response.raise_for_status()
+        except Exception as e:
+            print(f"Không thể truy cập {url_hien_tai}: {e}")
+            break
 
-        soup = BeautifulSoup(ket_qua.content, "html.parser")
+        soup = BeautifulSoup(response.content, "html.parser")
         cac_tin = soup.find_all('li', class_='knswli')
+
+        if not cac_tin:
+            print("Không còn bài viết, dừng lại.")
+            break
+
+        tin_moi_trong_trang = 0
 
         for tin in cac_tin:
             try:
@@ -40,6 +47,7 @@ def lay_tin_kenh14():
                 if link_day_du in da_xem:
                     continue
                 da_xem.add(link_day_du)
+                tin_moi_trong_trang += 1
 
                 tieu_de_bai = the_link.text.strip()
 
@@ -51,13 +59,11 @@ def lay_tin_kenh14():
                         anh_bia = the_anh['src']
 
                 try:
-                    bai_viet = requests.get(link_day_du, headers=dau_trang, timeout=5)
-                    if bai_viet.status_code != 200:
-                        print(f"Loi mo bai: {link_day_du}")
-                        continue
+                    bai_viet = requests.get(link_day_du, headers=headers, timeout=5)
+                    bai_viet.raise_for_status()
                     soup_bai = BeautifulSoup(bai_viet.content, "html.parser")
-                except Exception as loi:
-                    print(f"Van de: {loi}")
+                except Exception as e:
+                    print(f"Lỗi khi mở bài {link_day_du}: {e}")
                     continue
 
                 the_tom_tat = soup_bai.find("h2", class_="knc-sapo")
@@ -79,22 +85,25 @@ def lay_tin_kenh14():
                     "Link": link_day_du
                 })
 
-                print(f"Tieu de: {tieu_de_bai}")
-                print(f"Anh: {anh_bia}")
-                print(f"Link bai: {link_day_du}\n")
+                print(f"{tieu_de_bai}")
 
-            except Exception as loi:
-                print(f"Loi mot tin: {loi}")
+            except Exception as e:
+                print(f"Lỗi khi xử lý tin: {e}")
+
+        if tin_moi_trong_trang == 0:
+            print("Trang không có tin mới, dừng lại.")
+            break
+        trang_so += 1
 
     df = pd.DataFrame(danh_sach_bai)
     ten_file = f"TinTucKenh14_{datetime.now().strftime('%Y-%m-%d')}.csv"
     df.to_csv(ten_file, index=False, encoding='utf-8')
-    print(f"\nDa xong {len(df)} tin vao {ten_file}")
+    print(f"\nĐã lưu {len(df)} tin vào {ten_file}")
 
 schedule.every().day.at("06:00").do(lay_tin_kenh14)
 
 if __name__ == "__main__":
-    print("Cho den gio...")
+    print("Đang chờ lịch chạy lúc 06:00 mỗi ngày...")
     while True:
         schedule.run_pending()
         time.sleep(20)
